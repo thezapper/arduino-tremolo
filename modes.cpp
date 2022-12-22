@@ -1,4 +1,5 @@
 
+#include <Arduino.h>
 #include "modes.h"
 
 // A bight LED means low resistance in the LDR which will direct the signal to ground
@@ -39,7 +40,11 @@ void fastRampUp()
   }
 }
 
-int ramp(bool up)
+// +------------------------------------------------------------------------+
+// | Sawtooth
+// | Fade in or out then jump back to the opposite end
+// +------------------------------------------------------------------------+
+int sawtooth(bool up)
 {
   fadeAmount = abs(fadeAmount);
   if (!up)
@@ -66,6 +71,10 @@ int ramp(bool up)
 
   return (brightness);
 }
+
+// +------------------------------------------------------------------------+
+// | Square wave
+// +------------------------------------------------------------------------+
 const int DELAY = 250; // waveform delay in ms
 int count = DELAY;
 bool isLoud = false;
