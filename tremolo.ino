@@ -3,7 +3,7 @@
 #include "modes.h"
 #include "input.h"
 
-const float DAC_MAX_VOLTAGE = 3.6;
+const float DAC_MAX_VOLTAGE = 5;
 const int STEPS_PER_VOLT = 1024 / DAC_MAX_VOLTAGE;
 
 enum MODE
@@ -17,8 +17,8 @@ enum MODE
 int OutputLed = DAC0; // this shines on the LDR
 int IndicatorLed = PIN_A1;  // this flashes as an indicator
 int indicatorLevel = 0;
-int minBrightness = 1.2 * STEPS_PER_VOLT;
-int maxBrightness = 2.7 * STEPS_PER_VOLT;
+int minBrightness = 2.5 * STEPS_PER_VOLT;
+int maxBrightness = 5.0 * STEPS_PER_VOLT;
 int brightness = maxBrightness;  // how bright the LED is
 int fadeAmount = 1;  // how many points to fade the LED by
 
