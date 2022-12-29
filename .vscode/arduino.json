@@ -1,7 +1,7 @@
 {
-    "board": "arduino:samd:mkrzero",
-    "port": "COM5",
-    "programmer": "arduino:edbg",
     "sketch": "tremolo.ino",
+    "board": "arduino:samd:arduino_zero_native",
+    "port": "COM4",
+    "programmer": "arduino:edbg",
     "output": "./build"
 }

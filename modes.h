@@ -6,7 +6,5 @@ extern int fadeAmount;
 extern int brightnessRange;
 extern int OutputLed;
 
-extern 
-
 int triangle();
-int ramp(bool up);
+int sawtooth(bool up);
