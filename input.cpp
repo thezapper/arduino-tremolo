@@ -1,50 +1,59 @@
 #include <Arduino.h>
 #include "input.h"
+#define Serial SerialUSB
 
-unsigned long sampleTime1 = millis();
-unsigned long sampleTime2 = 0;
-unsigned long timeDiff = 0;
-const bool BUTTON_DOWN = false; // button press goes to ground
-const bool BUTTON_UP = true; 
-bool state9 = BUTTON_UP;
+#define DEBOUNCE_TIME 30
 
-void gatherInput()
+void gatherInput(buttonVars *btnArray, byte numButtons)
 {
-  sampleTime2 = millis();
+  ULONG now = millis();
+  char out[32] = {0};
 
-  timeDiff = sampleTime2 - sampleTime1;
-    
-  PinStatus status9 = digitalRead(9);
+  buttonVars *btn = 0;
+  // loop over all the buttons
+  for (int i = 0; i < numButtons; i++)
+  {      
+    btn = &btnArray[i];
 
-  // button down
-  if (status9 == PinStatus::LOW)
-  {
-    // button was previously up and not pressed within 10ms
-    if (timeDiff > 10 && state9 == BUTTON_UP)
+    // get the button current state
+    int state = digitalRead(btn->pinNo);
+
+    ULONG delta = now - btn->lastAction;
+    //sprintf(out, "--- Delta: %d", delta);
+    //Serial.println(out);
+
+    if (delta < DEBOUNCE_TIME)
+      continue;
+
+    if (state == PinStatus::LOW)
     {
-      Serial.println("Press");
+      if ( btn->state == PinStatus::HIGH )
+      {
+        sprintf(out, "%d Down", btn->pinNo);
+        Serial.println(out);
 
-      state9 = BUTTON_DOWN;
-      sampleTime1 = sampleTime2;
-
-      rampDir = !rampDir;
+        btn->state = PinStatus::LOW;
+        btn->lastAction = now;
+      }
+      else
+      {
+        if (delta > 500)
+        {
+        sprintf(out, "%d Repeat", btn->pinNo);
+          Serial.println(out);
+          btn->lastAction = now;
+        }
+      }
     }
-
-    // button is held down
-    if (timeDiff > 500)
+    else // button up
     {
-      Serial.println("Repeat");
-      sampleTime1 = sampleTime2;
+      if (btn->state == PinStatus::LOW)
+      {
+        sprintf(out, "%d Release", btn->pinNo);
+        Serial.println(out);
+        btn->state = PinStatus::HIGH;
+        btn->lastAction = now;
+      }
     }
   }
-  else // button up
-  {
-    // Button was down
-    if (state9 == BUTTON_DOWN)
-    {
-      Serial.println("Release");
-      state9 = BUTTON_UP;
-    }
-  }
-
 } 

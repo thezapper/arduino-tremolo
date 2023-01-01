@@ -8,3 +8,4 @@ extern int OutputLed;
 
 int triangle();
 int sawtooth(bool up);
+int square();

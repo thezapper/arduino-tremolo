@@ -1,4 +1,16 @@
 
 extern bool rampDir;
 
-void gatherInput();
+typedef unsigned long ULONG;
+typedef unsigned char UCHAR;
+
+struct buttonVars
+{
+  PinStatus state;
+  bool doPress;  // button has just gone from up to down, single shot event.
+  bool doRepeat; // button has been held down for a repeat.
+  pin_size_t pinNo;
+  ULONG lastAction;
+};
+
+void gatherInput(buttonVars *btnArray, byte numButtons);
