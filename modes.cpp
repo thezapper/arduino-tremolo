@@ -5,96 +5,102 @@
 // A bight LED means low resistance in the LDR which will direct the signal to ground
 // --== BRIGHT IS QUIET ==--
 
+unsigned long timer = 0;
+unsigned long cycleTime = 1000; // ms
+float hz = 1.0f;
+float bpm = 60.0f;
+
 // +------------------------------------------------------------------------+
 // | Triangle waveform
 // +------------------------------------------------------------------------+
-int triangle()
+float triangle(unsigned long frameTime)
 {
-  brightness = brightness + fadeAmount;
+  timer += frameTime;
+  if (timer > cycleTime)
+    timer -= cycleTime;
 
-  // reverse the direction of the fading at the ends of the fade:
-  if (brightness <= minBrightness ) 
-  {
-    brightness = minBrightness;
-    fadeAmount = -fadeAmount;
-  }
+  // 1.0      /\
+  //         /  \
+  // 0.5    /    \
+  //       /      \
+  // 0.0 -+--------+-
+  //     0.0  .5  1.0  <-time
+  
+  // calculate where we are in the cycle based on the current time
+  float pos = (float)timer / (float)cycleTime;
 
-  if (brightness >= maxBrightness) 
-  {
-    brightness = maxBrightness;
-    fadeAmount = -fadeAmount;
-  }
-}
-
-// +------------------------------------------------------------------------+
-// | fastRampUp
-// | to avoid pops from just cutting the volume to 0 instantly.
-// +------------------------------------------------------------------------+
-const int FAST_RAMP_DELAY = 1;
-void fastRampUp()
-{
-  for (int i = 0; i < brightnessRange; i+=8)
-  {
-    analogWrite(OutputLed, minBrightness + (i) );
-    delay(FAST_RAMP_DELAY);
-  }
+  // t=0, v=0.  t=0.5, v=1.0
+  float value = pos;
+  if (pos > 0.5)
+    value = 1.0 - pos;
+  
+  return (value);
 }
 
 // +------------------------------------------------------------------------+
 // | Sawtooth
 // | Fade in or out then jump back to the opposite end
 // +------------------------------------------------------------------------+
-int sawtooth(bool up)
+float sawtooth(bool up, unsigned long frameTime)
 {
-  fadeAmount = abs(fadeAmount);
-  if (!up)
-  {
-    fadeAmount = -fadeAmount;
-  }
-  brightness = brightness + fadeAmount;
+  timer += frameTime;
+  if (timer > cycleTime)
+    timer -= cycleTime;
 
-  if (up) // fade in
-  {
-    if (brightness >= maxBrightness) 
-    {
-      brightness = minBrightness;
-    }
-  }
-  else // fade out
-  {
-    if (brightness <= minBrightness ) 
-    {
-      fastRampUp();
-      brightness = maxBrightness;
-    }
-  } 
-
-  return (brightness);
+  // 1.0         / |
+  //           /   |
+  // 0.5     /     |
+  //       /       |
+  // 0.0 -+--------+-
+  //     0.0  .5  1.0  <-time
+  
+  // calculate where we are in the cycle based on the current time
+  float pos = (float)timer / (float)cycleTime;
+  
+  if (up)
+    return (pos);
+  else
+    return (1.0 - pos);
 }
 
 // +------------------------------------------------------------------------+
 // | Square wave
 // +------------------------------------------------------------------------+
-const int DELAY = 500; // waveform delay in ms
 bool isLoud = false;
-unsigned long timer = 0;
-int square(unsigned long frameTime)
+float square(unsigned long frameTime)
 {
   timer += frameTime;
-  if (timer > DELAY)
-  {
-    // currently loud and need to cut the volume by ramping down quickly to avoid pops
-    if (isLoud)
-    {
-      fastRampUp();
-      brightness = maxBrightness; // min
-    }
-    else
-    {
-      brightness = minBrightness;
-    }
-    isLoud = !isLoud;
-    timer = 0;
+  if (timer > cycleTime)
+    timer -= cycleTime;
 
-  }
+  if (timer > (cycleTime/2) )
+    return 1.0;
+  else
+    return 0.0;
+}
+
+// +------------------------------------------------------------------------+
+// | Smooth (sine) wave
+// +------------------------------------------------------------------------+
+float smooth(unsigned long frameTime)
+{
+  timer += frameTime;
+  if (timer > cycleTime)
+    timer -= cycleTime;
+
+  // calculate where we are in the cycle based on the current time
+  float pos = (float)timer / (float)cycleTime;
+  float val = sin(pos * TWO_PI);
+
+  return ( (val + 1) / 2.0f);
+}
+
+// +------------------------------------------------------------------------+
+// | Set the rate of the effect in ms , i.e. 1000ms = 1hz
+// +------------------------------------------------------------------------+
+void setRate(int time)
+{
+  cycleTime = time;
+  hz = (float)cycleTime / 1000.0f;
+  bpm = hz * 60.0f;
 }

@@ -2,7 +2,7 @@
 #include "input.h"
 #define Serial SerialUSB
 
-#define DEBOUNCE_TIME 30
+#define DEBOUNCE_TIME 15
 
 void gatherInput(buttonVars *btnArray, byte numButtons)
 {

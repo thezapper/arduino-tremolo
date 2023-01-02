@@ -1,6 +1,5 @@
 
-extern bool rampDir;
-
+//extern bool rampDir;
 typedef unsigned long ULONG;
 typedef unsigned char UCHAR;
 

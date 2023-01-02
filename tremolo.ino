@@ -10,6 +10,7 @@ const int STEPS_PER_VOLT = 1024 / DAC_MAX_VOLTAGE;
 enum MODE
 {
   TRIANGLE = 0,
+  SMOOTH,  
   RAMP_UP,
   RAMP_DOWN,
   SQUARE
@@ -34,7 +35,7 @@ int brightnessRange = maxBrightness - minBrightness;
 buttonVars buttonStates[NUM_BUTTONS];
 
 // button mappings
-#define MODE_BTN 1
+#define MODE_BTN 2
 
 // the setup routine runs once when you press reset:
 void setup() {
@@ -53,9 +54,9 @@ void setup() {
   buttonStates[0].pinNo = 7;
   buttonStates[0].state = PinStatus::HIGH;
   buttonStates[0].lastAction = 0;
-  buttonStates[MODE_BTN].pinNo = 8;
-  buttonStates[MODE_BTN].state = PinStatus::HIGH;
-  buttonStates[MODE_BTN].lastAction = 0;
+  buttonStates[1].pinNo = 8;
+  buttonStates[1].state = PinStatus::HIGH;
+  buttonStates[1].lastAction = 0;
   buttonStates[2].pinNo = 9;
   buttonStates[2].state = PinStatus::HIGH;
   buttonStates[2].lastAction = 0;  
@@ -68,6 +69,19 @@ int indicatorBrightness(int brt)
 
   //return (255 - (brightPercent * 255)); // invert so a bright LED is a loud sound
   return ( brightPercent * 255); // invert so a bright LED is a loud sound
+}
+
+// +------------------------------------------------------------------------+
+// | fastRampUp
+// | to avoid pops from just cutting the volume to 0 instantly.
+// +------------------------------------------------------------------------+
+void fastRampUp()
+{
+  for (int i = 0; i < brightnessRange; i+=8)
+  {
+    analogWrite(OutputLed, minBrightness + (i) );
+    delay(1);
+  }
 }
 
 ULONG lastFrame = millis();
@@ -101,6 +115,10 @@ void loop()
     switch(currentMode) 
     {
       case MODE::TRIANGLE : 
+        currentMode = MODE::SMOOTH;
+        Serial.println("SMOOTH");
+        break;
+      case MODE::SMOOTH : 
         currentMode = MODE::RAMP_UP;
         Serial.println("RAMP_UP");
         break;
@@ -121,42 +139,44 @@ void loop()
     buttonStates[MODE_BTN].doPress = false;
   }
 
+  float amplitude = 0;
   switch (currentMode)
   {
+    // the mode functions return a value between 0.0 and 1.0 representing 
+    // amplitude at that point in time
     case MODE::TRIANGLE:
     {
-      triangle();
+      amplitude = triangle(frameTime);
+      break;
+    }
+    case MODE::SMOOTH:
+    {
+      amplitude = smooth(frameTime);
       break;
     }
     case MODE::RAMP_DOWN:
     {
-      sawtooth(true);
+      amplitude = sawtooth(true, frameTime);
       break;
     }
     case MODE::RAMP_UP:
     {
-      sawtooth(false);
+      amplitude = sawtooth(false, frameTime);
       break;
     }
     case MODE::SQUARE:
     {
-      square(frameTime);
+      // TODO - Handle fast ramp situation
+      amplitude = square(frameTime);
       break;
     }
   }
 
+  int offset = amplitude * brightnessRange;
+  brightness = minBrightness + offset;
+
   indicatorLevel = indicatorBrightness(brightness);
-  //Serial.println("");
-  // Serial.print(shiftedBrightness);
-  // Serial.print(" ... ");
-  // Serial.print(brightPercent);
-  // Serial.print(" ... ");
-  // Serial.println(ratio);
   
-  // set the brightness of pin 9:
- // Serial.println(brightness);
   analogWrite(OutputLed, brightness);
   analogWrite(IndicatorLed, indicatorLevel);
-
-  delay(1);
 }

@@ -6,6 +6,9 @@ extern int fadeAmount;
 extern int brightnessRange;
 extern int OutputLed;
 
-int triangle();
-int sawtooth(bool up);
-int square(unsigned long frameTime);
+float triangle(unsigned long frameTime);
+float sawtooth(bool up, unsigned long frameTime);
+float square(unsigned long frameTime);
+float smooth(unsigned long frameTime);
+
+void setRate(int time);
