@@ -15,13 +15,13 @@ enum MODE
   SQUARE
 };
 
-MODE currentMode = TRIANGLE;
+MODE currentMode = SQUARE;
 
 int OutputLed = DAC0; // this shines on the LDR
 int IndicatorLed = PIN_A1;  // this flashes as an indicator
 int indicatorLevel = 0;
 int minBrightness = 2.5f * STEPS_PER_VOLT;
-int maxBrightness = DAC_MAX_VOLTAGE * STEPS_PER_VOLT;
+int maxBrightness = (DAC_MAX_VOLTAGE * STEPS_PER_VOLT) - 1;
 int brightness = maxBrightness;  // how bright the LED is
 int fadeAmount = 1;  // how many points to fade the LED by
 
@@ -30,10 +30,11 @@ int shiftedBrightness= 0;
 int brightnessRange = maxBrightness - minBrightness;
 //float ratio = (float)brightnessRange / (float)maxBrightness;
 
-bool buttonStateChanged[2] = {0};
-
 #define NUM_BUTTONS 3
 buttonVars buttonStates[NUM_BUTTONS];
+
+// button mappings
+#define MODE_BTN 1
 
 // the setup routine runs once when you press reset:
 void setup() {
@@ -42,7 +43,6 @@ void setup() {
 
   
   Serial.println("Max Brightness: " + String(maxBrightness));
-  // declare pin 9 to be an output:
   pinMode(IndicatorLed, OUTPUT);
   analogWriteResolution(10);
 
@@ -53,9 +53,9 @@ void setup() {
   buttonStates[0].pinNo = 7;
   buttonStates[0].state = PinStatus::HIGH;
   buttonStates[0].lastAction = 0;
-  buttonStates[1].pinNo = 8;
-  buttonStates[1].state = PinStatus::HIGH;
-  buttonStates[1].lastAction = 0;
+  buttonStates[MODE_BTN].pinNo = 8;
+  buttonStates[MODE_BTN].state = PinStatus::HIGH;
+  buttonStates[MODE_BTN].lastAction = 0;
   buttonStates[2].pinNo = 9;
   buttonStates[2].state = PinStatus::HIGH;
   buttonStates[2].lastAction = 0;  
@@ -70,7 +70,9 @@ int indicatorBrightness(int brt)
   return ( brightPercent * 255); // invert so a bright LED is a loud sound
 }
 
-ULONG lastUpdate = millis();
+ULONG lastFrame = millis();
+ULONG frameTime = 0;
+ULONG fpsTimer = 0;
 unsigned int frames = 0;
 char fps[8] = {0};
 
@@ -78,19 +80,46 @@ void loop()
 {
 
   ULONG now = millis();
-  ULONG delta = now - lastUpdate;
+  frameTime = now - lastFrame;
+  fpsTimer += frameTime;
   frames++;
-  if (delta > 5000)
+  if (fpsTimer > 3000)
   {
-    sprintf(fps, "FPS:%d", frames/5);
+    sprintf(fps, "FPS:%d", frames/3);
     Serial.println(fps);
 
-    lastUpdate += delta;
+    fpsTimer = 0;
     frames = 0;
   }
+  lastFrame = now;
   
-
   gatherInput(buttonStates, NUM_BUTTONS);
+
+  // process the input
+  if (buttonStates[MODE_BTN].doPress)
+  {
+    switch(currentMode) 
+    {
+      case MODE::TRIANGLE : 
+        currentMode = MODE::RAMP_UP;
+        Serial.println("RAMP_UP");
+        break;
+      case MODE::RAMP_UP : 
+        currentMode = MODE::RAMP_DOWN;
+        Serial.println("RAMP_DOWN");
+        break;
+      case MODE::RAMP_DOWN : 
+        currentMode = MODE::SQUARE;
+        Serial.println("SQUARE");
+        break;
+      case MODE::SQUARE : 
+        currentMode = MODE::TRIANGLE;
+        Serial.println("TRIANGLE");
+        break;
+    }
+
+    buttonStates[MODE_BTN].doPress = false;
+  }
 
   switch (currentMode)
   {
@@ -111,7 +140,7 @@ void loop()
     }
     case MODE::SQUARE:
     {
-      square();
+      square(frameTime);
       break;
     }
   }
@@ -125,6 +154,7 @@ void loop()
   // Serial.println(ratio);
   
   // set the brightness of pin 9:
+ // Serial.println(brightness);
   analogWrite(OutputLed, brightness);
   analogWrite(IndicatorLed, indicatorLevel);
 

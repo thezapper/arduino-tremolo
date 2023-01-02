@@ -32,6 +32,9 @@ void gatherInput(buttonVars *btnArray, byte numButtons)
         sprintf(out, "%d Down", btn->pinNo);
         Serial.println(out);
 
+        // mark the button ready for a press action
+        btn->doPress = true;
+
         btn->state = PinStatus::LOW;
         btn->lastAction = now;
       }

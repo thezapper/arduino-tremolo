@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "modes.h"
+#define Serial SerialUSB
 
 // A bight LED means low resistance in the LDR which will direct the signal to ground
 // --== BRIGHT IS QUIET ==--
@@ -74,30 +75,26 @@ int sawtooth(bool up)
 // +------------------------------------------------------------------------+
 // | Square wave
 // +------------------------------------------------------------------------+
-const int DELAY = 250; // waveform delay in ms
-int count = DELAY;
+const int DELAY = 500; // waveform delay in ms
 bool isLoud = false;
-int square()
+unsigned long timer = 0;
+int square(unsigned long frameTime)
 {
-  count -= fadeAmount;
-
-  if (count <= 0)
+  timer += frameTime;
+  if (timer > DELAY)
   {
     // currently loud and need to cut the volume by ramping down quickly to avoid pops
     if (isLoud)
     {
       fastRampUp();
+      brightness = maxBrightness; // min
+    }
+    else
+    {
+      brightness = minBrightness;
     }
     isLoud = !isLoud;
-    count = DELAY;
-  }
+    timer = 0;
 
-  if (isLoud)
-  {
-    brightness = minBrightness; // min
-  }
-  else
-  {
-    brightness = maxBrightness;
   }
 }

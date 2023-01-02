@@ -8,4 +8,4 @@ extern int OutputLed;
 
 int triangle();
 int sawtooth(bool up);
-int square();
+int square(unsigned long frameTime);
