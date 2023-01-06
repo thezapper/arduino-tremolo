@@ -3,6 +3,7 @@
 
 #include "modes.h"
 #include "input.h"
+#include "Rotary.h"
 
 const float DAC_MAX_VOLTAGE = 4.0f;
 const int STEPS_PER_VOLT = 1024 / DAC_MAX_VOLTAGE;
@@ -37,9 +38,116 @@ buttonVars buttonStates[NUM_BUTTONS];
 // button mappings
 #define MODE_BTN 2
 
+char encBuff[32] = {0};
+#define CLOCK_PIN_A 2
+#define DATA_PIN_B 3
+volatile bool dataReadyA = false;
+volatile bool dataReadyB = false;
+volatile int encA = 0;
+volatile int encB = 0;
+UCHAR encCount = 0;
+volatile bool AFiredFirst = false;
+volatile bool BFiredFirst = false;
+
+Rotary encoder(3,2);
+
+
+unsigned long intTime = 0;
+unsigned long procTime = 0;
+void encInterruptA()
+{
+  noInterrupts();
+
+  intTime = micros();
+  if ( (AFiredFirst == false) && (BFiredFirst == false) )
+  {
+    AFiredFirst = true;
+  }
+
+  encA = digitalRead(CLOCK_PIN_A);
+  encB = digitalRead(DATA_PIN_B);
+
+  interrupts();
+
+  // if (dataReadyA == false)
+  // {
+  //   encA = digitalRead(CLOCK_PIN_A);
+  //   encB = digitalRead(DATA_PIN_B);
+  //   dataReadyA = true;
+  // }
+}
+
+void encInterruptB()
+{
+  noInterrupts();
+
+  if ((AFiredFirst == false) && (BFiredFirst == false))
+  {
+    BFiredFirst = true;
+  }
+  encA = digitalRead(CLOCK_PIN_A);
+  encB = digitalRead(DATA_PIN_B);
+  interrupts();
+
+  dataReadyB = true;
+}
+
+void processInt()
+{
+  noInterrupts();
+
+  procTime = micros();
+  ULONG diff = procTime - intTime;
+  //encA = digitalRead(CLOCK_PIN_A);
+  //encB = digitalRead(DATA_PIN_B);
+  
+  //if (encA != encB)
+  if (AFiredFirst)
+  {
+    sprintf(encBuff, "AB:%d%d - FORWARD. Time Diff %d", AFiredFirst, BFiredFirst, diff);
+    AFiredFirst = false;
+    BFiredFirst = false;
+    Serial.println(encBuff);
+  }
+
+  if (BFiredFirst)
+  {
+    sprintf(encBuff, "AB:%d%d - BACKWARD", AFiredFirst, BFiredFirst);
+    AFiredFirst = false;
+    BFiredFirst = false;
+    Serial.println(encBuff);
+  }
+  
+
+  //dataReadyA = false;
+  
+  interrupts();
+}
+
+void processIntB()
+{
+
+  if (encA == HIGH && encB == LOW)
+  {
+    encCount += 1;
+    sprintf(encBuff, "AB:%d%d - Count:%u, INT-AB:%d%d, REV", encA, encB, encCount, dataReadyA, dataReadyB);
+  }
+
+  if (encB == HIGH && encA == LOW)
+  {
+    encCount -= 1;
+    sprintf(encBuff, "AB:%d%d - Count:%u, INT-AB:%d%d, FWD", encA, encB, encCount, dataReadyA, dataReadyB);
+  }
+    
+  Serial.println(encBuff);
+
+  dataReadyA = false;
+  dataReadyB = false;
+}
+
 // the setup routine runs once when you press reset:
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(9600);
   delay(500); // wait for serial
 
   
@@ -47,6 +155,13 @@ void setup() {
   pinMode(IndicatorLed, OUTPUT);
   analogWriteResolution(10);
 
+  //pinMode(CLOCK_PIN_A, INPUT); // PIN A - CLOCK
+  //pinMode(DATA_PIN_B, INPUT); // PIN B - DATA
+
+  //attachInterrupt(digitalPinToInterrupt(CLOCK_PIN_A), encInterruptA, CHANGE);
+  //attachInterrupt(digitalPinToInterrupt(DATA_PIN_B), encInterruptB, HIGH);
+
+  // set up buttons
   pinMode(7, INPUT_PULLUP);
   pinMode(8, INPUT_PULLUP);
   pinMode(9, INPUT_PULLUP);
@@ -84,28 +199,46 @@ void fastRampUp()
   }
 }
 
-ULONG lastFrame = millis();
+ULONG lastFrame = micros();
 ULONG frameTime = 0;
 ULONG fpsTimer = 0;
 unsigned int frames = 0;
-char fps[8] = {0};
+char fps[16] = {0};
 
+int turnCount = 0;
+int encLast = LOW;
+
+ULONG lastEncoderTime = 0;
 void loop() 
 {
-
-  ULONG now = millis();
+  ULONG now = micros();
   frameTime = now - lastFrame;
   fpsTimer += frameTime;
   frames++;
-  if (fpsTimer > 3000)
+  if (fpsTimer > 5000000)
   {
-    sprintf(fps, "FPS:%d", frames/3);
+    sprintf(fps, "FPS:%d", frames/5);
     Serial.println(fps);
 
     fpsTimer = 0;
     frames = 0;
   }
   lastFrame = now;
+  
+  unsigned char dir = encoder.process();
+  if (dir != 0)
+    Serial.println(dir);
+
+
+  // Process the interrupt function
+  // if ( (now - lastEncoderTime) > 10)
+  // {
+  //   //if (dataReadyA)
+  //   //{
+  //     processInt();
+  //     lastEncoderTime = now;
+  //   //}
+  // }
   
   gatherInput(buttonStates, NUM_BUTTONS);
 

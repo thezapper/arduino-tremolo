@@ -6,7 +6,7 @@
 // --== BRIGHT IS QUIET ==--
 
 unsigned long timer = 0;
-unsigned long cycleTime = 1000; // ms
+unsigned long cycleTime = 1000000; // us
 float hz = 1.0f;
 float bpm = 60.0f;
 
@@ -29,12 +29,13 @@ float triangle(unsigned long frameTime)
   // calculate where we are in the cycle based on the current time
   float pos = (float)timer / (float)cycleTime;
 
-  // t=0, v=0.  t=0.5, v=1.0
   float value = pos;
   if (pos > 0.5)
     value = 1.0 - pos;
   
-  return (value);
+  // When pos reaches 0.5 we want the output to be 1.0, so multiply the 
+  // output by 2
+  return (value * 2.0f);
 }
 
 // +------------------------------------------------------------------------+
@@ -101,6 +102,6 @@ float smooth(unsigned long frameTime)
 void setRate(int time)
 {
   cycleTime = time;
-  hz = (float)cycleTime / 1000.0f;
+  hz = (float)cycleTime / 1000000.0f; // microseconds
   bpm = hz * 60.0f;
 }

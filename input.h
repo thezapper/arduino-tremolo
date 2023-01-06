@@ -12,4 +12,5 @@ struct buttonVars
   ULONG lastAction;
 };
 
+void checkEncoder(ULONG frameTime);
 void gatherInput(buttonVars *btnArray, byte numButtons);
