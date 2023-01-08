@@ -1,9 +1,11 @@
+
+
 #include <Arduino.h>
 #define Serial SerialUSB
 
 #include "modes.h"
 #include "input.h"
-#include "Rotary.h"
+#include "oled.h"
 
 const float DAC_MAX_VOLTAGE = 4.0f;
 const int STEPS_PER_VOLT = 1024 / DAC_MAX_VOLTAGE;
@@ -36,130 +38,24 @@ int brightnessRange = maxBrightness - minBrightness;
 buttonVars buttonStates[NUM_BUTTONS];
 
 // button mappings
+#define POT_1 PIN_A2
 #define MODE_BTN 2
 
-char encBuff[32] = {0};
-#define CLOCK_PIN_A 2
-#define DATA_PIN_B 3
-volatile bool dataReadyA = false;
-volatile bool dataReadyB = false;
-volatile int encA = 0;
-volatile int encB = 0;
-UCHAR encCount = 0;
-volatile bool AFiredFirst = false;
-volatile bool BFiredFirst = false;
-
-Rotary encoder(3,2);
-
-
-unsigned long intTime = 0;
-unsigned long procTime = 0;
-void encInterruptA()
-{
-  noInterrupts();
-
-  intTime = micros();
-  if ( (AFiredFirst == false) && (BFiredFirst == false) )
-  {
-    AFiredFirst = true;
-  }
-
-  encA = digitalRead(CLOCK_PIN_A);
-  encB = digitalRead(DATA_PIN_B);
-
-  interrupts();
-
-  // if (dataReadyA == false)
-  // {
-  //   encA = digitalRead(CLOCK_PIN_A);
-  //   encB = digitalRead(DATA_PIN_B);
-  //   dataReadyA = true;
-  // }
-}
-
-void encInterruptB()
-{
-  noInterrupts();
-
-  if ((AFiredFirst == false) && (BFiredFirst == false))
-  {
-    BFiredFirst = true;
-  }
-  encA = digitalRead(CLOCK_PIN_A);
-  encB = digitalRead(DATA_PIN_B);
-  interrupts();
-
-  dataReadyB = true;
-}
-
-void processInt()
-{
-  noInterrupts();
-
-  procTime = micros();
-  ULONG diff = procTime - intTime;
-  //encA = digitalRead(CLOCK_PIN_A);
-  //encB = digitalRead(DATA_PIN_B);
-  
-  //if (encA != encB)
-  if (AFiredFirst)
-  {
-    sprintf(encBuff, "AB:%d%d - FORWARD. Time Diff %d", AFiredFirst, BFiredFirst, diff);
-    AFiredFirst = false;
-    BFiredFirst = false;
-    Serial.println(encBuff);
-  }
-
-  if (BFiredFirst)
-  {
-    sprintf(encBuff, "AB:%d%d - BACKWARD", AFiredFirst, BFiredFirst);
-    AFiredFirst = false;
-    BFiredFirst = false;
-    Serial.println(encBuff);
-  }
-  
-
-  //dataReadyA = false;
-  
-  interrupts();
-}
-
-void processIntB()
-{
-
-  if (encA == HIGH && encB == LOW)
-  {
-    encCount += 1;
-    sprintf(encBuff, "AB:%d%d - Count:%u, INT-AB:%d%d, REV", encA, encB, encCount, dataReadyA, dataReadyB);
-  }
-
-  if (encB == HIGH && encA == LOW)
-  {
-    encCount -= 1;
-    sprintf(encBuff, "AB:%d%d - Count:%u, INT-AB:%d%d, FWD", encA, encB, encCount, dataReadyA, dataReadyB);
-  }
-    
-  Serial.println(encBuff);
-
-  dataReadyA = false;
-  dataReadyB = false;
-}
+oled disp = oled();
 
 // the setup routine runs once when you press reset:
 void setup() {
   Serial.begin(9600);
-  delay(500); // wait for serial
+  delay(600); // wait for serial
 
-  
   Serial.println("Max Brightness: " + String(maxBrightness));
   pinMode(IndicatorLed, OUTPUT);
   analogWriteResolution(10);
+  analogReadResolution(8);
 
-  //pinMode(CLOCK_PIN_A, INPUT); // PIN A - CLOCK
-  //pinMode(DATA_PIN_B, INPUT); // PIN B - DATA
-
-  //attachInterrupt(digitalPinToInterrupt(CLOCK_PIN_A), encInterruptA, CHANGE);
-  //attachInterrupt(digitalPinToInterrupt(DATA_PIN_B), encInterruptB, HIGH);
+  analogReference(AR_DEFAULT);
+  
+  disp.setup();
 
   // set up buttons
   pinMode(7, INPUT_PULLUP);
@@ -208,7 +104,11 @@ char fps[16] = {0};
 int turnCount = 0;
 int encLast = LOW;
 
-ULONG lastEncoderTime = 0;
+int pot1Now = 0;
+int prevPot1 = 0;
+int pot1sampleCount = 0;
+ulong potSampleTimer = 0;
+char pot[64] = {0};
 void loop() 
 {
   ULONG now = micros();
@@ -225,20 +125,32 @@ void loop()
   }
   lastFrame = now;
   
-  unsigned char dir = encoder.process();
-  if (dir != 0)
-    Serial.println(dir);
+  disp.update(frameTime);
 
+  // collect values for 20ms then average
+  potSampleTimer += frameTime;
+  pot1sampleCount++;
 
-  // Process the interrupt function
-  // if ( (now - lastEncoderTime) > 10)
-  // {
-  //   //if (dataReadyA)
-  //   //{
-  //     processInt();
-  //     lastEncoderTime = now;
-  //   //}
-  // }
+  if (potSampleTimer > 100000) // 100ms
+  {
+    pot1Now = analogRead(POT_1);
+    //int aveVal = (pot1Now / pot1sampleCount);
+
+    // see if the value has changed much since the last time,
+    // if not, the pot probably isn't moving
+    int diff = abs(prevPot1 - pot1Now);
+    if (diff > 1)
+    {
+      float scaledVal = (pot1Now / 256.0f) * 100.0f;
+      sprintf(pot, "POT:%.1f, val:%d, diff:%d", scaledVal, pot1Now, diff);
+      Serial.println(pot);
+
+      prevPot1 = pot1Now;
+    }
+
+    potSampleTimer = 0;
+    pot1sampleCount = 0;
+  }
   
   gatherInput(buttonStates, NUM_BUTTONS);
 

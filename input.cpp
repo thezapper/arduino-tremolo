@@ -4,36 +4,6 @@
 
 #define DEBOUNCE_TIME 15
 
-#define CLOCK_PIN_A 2
-#define DATA_PIN_B 3
-char encBuff2[32] = {0};
-ULONG encWaitTime = 0;
-int lastA = 0;
-void checkEncoder(ULONG frameTime)
-{
-  // encWaitTime += frameTime;
-  // if (frameTime < 500)
-  //   return;
-  
-  // frameTime -= 500;
-
-  int encA = digitalRead(CLOCK_PIN_A);
-  int encB = digitalRead(DATA_PIN_B);
-
-  if (encA == LOW)
-  {
-    //lastA = encA;
-    encWaitTime += frameTime;
-
-    sprintf(encBuff2, "AB:%d%d - %d", encA, encB, encWaitTime);
-    Serial.println(encBuff2);
-
-    return;
-  }
-
-  encWaitTime = 0;
-}
-
 void gatherInput(buttonVars *btnArray, byte numButtons)
 {
   ULONG now = millis();
