@@ -4,11 +4,11 @@ An Arduino controlled LED/LDR tremolo guitar pedal.
 ## Features (todo)
 
 * ~~Cycles based on time - not using delay()~~ - **DONE** 
-* Display, LCD or OLED
+* ~~Display, LCD or OLED~~ - **OLED DONE**
 * display to show BPM/Hz/Ms
 * Tap tempo
 * Encoders instead of pots
-* presets
+* Presets
 
 ### Parameters
 * Time (enc)

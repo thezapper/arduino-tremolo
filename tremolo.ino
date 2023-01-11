@@ -6,6 +6,7 @@
 #include "modes.h"
 #include "input.h"
 #include "oled.h"
+#include "pot.h"
 
 const float DAC_MAX_VOLTAGE = 4.0f;
 const int STEPS_PER_VOLT = 1024 / DAC_MAX_VOLTAGE;
@@ -19,6 +20,13 @@ enum MODE
   SQUARE
 };
 
+enum PARAM
+{
+  SPEED = 0,
+  DEPTH,  
+  DWELL,
+};
+
 MODE currentMode = SQUARE;
 
 int OutputLed = DAC0; // this shines on the LDR
@@ -27,21 +35,20 @@ int indicatorLevel = 0;
 int minBrightness = 2.5f * STEPS_PER_VOLT;
 int maxBrightness = (DAC_MAX_VOLTAGE * STEPS_PER_VOLT) - 1;
 int brightness = maxBrightness;  // how bright the LED is
-int fadeAmount = 1;  // how many points to fade the LED by
 
 float brightPercent = 0;  // the percentage of the maximum output.
 int shiftedBrightness= 0;
 int brightnessRange = maxBrightness - minBrightness;
-//float ratio = (float)brightnessRange / (float)maxBrightness;
 
 #define NUM_BUTTONS 3
 buttonVars buttonStates[NUM_BUTTONS];
 
 // button mappings
-#define POT_1 PIN_A2
 #define MODE_BTN 2
 
 oled disp = oled();
+pot pot1 = pot(PIN_A2);
+pot pot2 = pot(PIN_A3);
 
 // the setup routine runs once when you press reset:
 void setup() {
@@ -104,11 +111,12 @@ char fps[16] = {0};
 int turnCount = 0;
 int encLast = LOW;
 
-int pot1Now = 0;
-int prevPot1 = 0;
-int pot1sampleCount = 0;
-ulong potSampleTimer = 0;
-char pot[64] = {0};
+// int pot1Now = 0;
+// int prevPot1 = 0;
+// int potSampleTotal = 0;
+// int pot1sampleCount = 0;
+// ulong potSampleTimer = 0;
+// char pot[64] = {0};
 void loop() 
 {
   ULONG now = micros();
@@ -125,34 +133,26 @@ void loop()
   }
   lastFrame = now;
   
-  disp.update(frameTime);
-
-  // collect values for 20ms then average
-  potSampleTimer += frameTime;
-  pot1sampleCount++;
-
-  if (potSampleTimer > 100000) // 100ms
-  {
-    pot1Now = analogRead(POT_1);
-    //int aveVal = (pot1Now / pot1sampleCount);
-
-    // see if the value has changed much since the last time,
-    // if not, the pot probably isn't moving
-    int diff = abs(prevPot1 - pot1Now);
-    if (diff > 1)
-    {
-      float scaledVal = (pot1Now / 256.0f) * 100.0f;
-      sprintf(pot, "POT:%.1f, val:%d, diff:%d", scaledVal, pot1Now, diff);
-      Serial.println(pot);
-
-      prevPot1 = pot1Now;
-    }
-
-    potSampleTimer = 0;
-    pot1sampleCount = 0;
-  }
   
+  float potVal = pot1.update(frameTime);
+  if (potVal > 0.0)
+  {
+    // only update the display when the value has changed
+    // the internal timer resets on every update.
+    //Serial.println(potVal);
+    disp.setSpeed(potVal);
+  }
+  potVal = pot2.update(frameTime);
+  if (potVal > 0.0)
+  {
+    // only update the display when the value has changed
+    // the internal timer resets on every update.
+    //Serial.println(potVal);
+    disp.setDepth(potVal);
+  }
+
   gatherInput(buttonStates, NUM_BUTTONS);
+  disp.update(frameTime);
 
   // process the input
   if (buttonStates[MODE_BTN].doPress)
@@ -181,6 +181,7 @@ void loop()
         break;
     }
 
+    disp.setMode((int)currentMode);
     buttonStates[MODE_BTN].doPress = false;
   }
 
