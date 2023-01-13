@@ -97,11 +97,15 @@ float smooth(unsigned long frameTime)
 }
 
 // +------------------------------------------------------------------------+
-// | Set the rate of the effect in ms , i.e. 1000ms = 1hz
+// | Set the rate of the effect.  Accepts a value between 0 - 100
 // +------------------------------------------------------------------------+
-void setRate(int time)
+const int MAX_SPEED = 3000000; // 3 sec cycle/0.3hz
+const int MIN_SPEED = 100000;  // 0.1 sec cycle/10hz
+const int DIFF = MAX_SPEED - MIN_SPEED;
+void setRate(float percent)
 {
-  cycleTime = time;
+  //float timeInMicros
+  cycleTime = MIN_SPEED + ((percent / 100.0f) * DIFF);
   hz = (float)cycleTime / 1000000.0f; // microseconds
   bpm = hz * 60.0f;
 }

@@ -28,6 +28,7 @@ class oled
     int dwell = 0;
     char chSpeed[3] = {'0','0','0'};
     char chDepth[3] = {'0','0','0'};
+    char mode[8] = {0};
     ULONG updateTimer = 0;
     ULONG switchBackTimer = 0;
 

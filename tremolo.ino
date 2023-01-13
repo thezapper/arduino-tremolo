@@ -1,5 +1,3 @@
-
-
 #include <Arduino.h>
 #define Serial SerialUSB
 
@@ -27,7 +25,7 @@ enum PARAM
   DWELL,
 };
 
-MODE currentMode = SQUARE;
+MODE currentMode = TRIANGLE;
 
 int OutputLed = DAC0; // this shines on the LDR
 int IndicatorLed = PIN_A1;  // this flashes as an indicator
@@ -35,6 +33,7 @@ int indicatorLevel = 0;
 int minBrightness = 2.5f * STEPS_PER_VOLT;
 int maxBrightness = (DAC_MAX_VOLTAGE * STEPS_PER_VOLT) - 1;
 int brightness = maxBrightness;  // how bright the LED is
+float depth = 0.0f;
 
 float brightPercent = 0;  // the percentage of the maximum output.
 int shiftedBrightness= 0;
@@ -141,6 +140,7 @@ void loop()
     // the internal timer resets on every update.
     //Serial.println(potVal);
     disp.setSpeed(potVal);
+    setRate(potVal);
   }
   potVal = pot2.update(frameTime);
   if (potVal > 0.0)
@@ -148,6 +148,7 @@ void loop()
     // only update the display when the value has changed
     // the internal timer resets on every update.
     //Serial.println(potVal);
+    depth = potVal / 100.0f;
     disp.setDepth(potVal);
   }
 
@@ -217,9 +218,10 @@ void loop()
       break;
     }
   }
+  amplitude *= depth;
 
   int offset = amplitude * brightnessRange;
-  brightness = minBrightness + offset;
+  brightness = (minBrightness + offset);
 
   indicatorLevel = indicatorBrightness(brightness);
   

@@ -1,16 +1,8 @@
-// #include <Adafruit_GFX.h>
-// #include <Adafruit_GrayOLED.h>
-// #include <Adafruit_SPITFT_Macros.h>
-// #include <Adafruit_SPITFT.h>
-// #include <gfxfont.h>
-// #include <splash.h>
-
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
 #include "Arduino.h"
-
 #include "oled.h"
 
 #define Serial SerialUSB
@@ -57,12 +49,13 @@ void oled::powerOnMsg()
   // Clear the buffer
   display.clearDisplay();
 
-  display.setTextSize(3);      // Normal 1:1 pixel scale
-  display.setTextColor(SSD1306_WHITE); // Draw white text
-  display.setCursor(0, 0);     // Start at top-left corner
   display.cp437(true);         // Use full 256 char 'Code Page 437' font
+  display.setTextColor(SSD1306_WHITE); // Draw white text
+  
+  display.setTextSize(2);    
+  display.setCursor(10, 8);     
 
-  char message[] = "Hello,\nJimmy";
+  char message[] = "Jimmy the";
   size_t n = sizeof(message);
   for (int i = 0; i < n; i++)
   {
@@ -72,9 +65,18 @@ void oled::powerOnMsg()
 
     delay(50);
   }
+  delay(400);
+
+  display.setTextSize(3);    
+  display.setCursor(19, 30);
+  display.write("CUNT!");
+  display.display();
+
   delay(800);
 
 }
+
+char* modes[] = {"Saw", "Smooth", "Ramp Up", "Ramp Dn", "Square"};
 
 void oled::setSpeed(int val)
 {
@@ -108,11 +110,8 @@ void oled::drawModeParam(void)
   display.clearDisplay();
   display.setTextSize(3);
 
-  // sprintf(displayBuff, "Speed:%d", this->speed);
-  display.setCursor(0, 0);     // Start at top-left corner
-  display.write("Mode");
-  display.setCursor(50, 32); 
-  display.write(chSpeed);
+  display.setCursor(0, CENTRE_HEIGHT - 12); 
+  display.write(modes[currentMode]);
 
   display.display();
 }
@@ -157,7 +156,6 @@ void oled::drawDwellParam(void)
 void oled::drawBar(uint8_t val, uint16_t x, uint16_t y)
 {
   // hardcode the bar width to 100px
-
 
   // draw the filled part of the bar
   display.fillRect( x, y, val, 4, SSD1306_WHITE);

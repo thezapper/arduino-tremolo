@@ -17,6 +17,7 @@ bool pot::hasChanged()
   return false;
 }
 
+// returns a 0.0 - 100.0 value
 float pot::update(u_long frameTime)
 {
   float retVal = -1.0;

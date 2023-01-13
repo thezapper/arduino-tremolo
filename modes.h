@@ -13,6 +13,6 @@ float sawtooth(bool up, unsigned long frameTime);
 float square(unsigned long frameTime);
 float smooth(unsigned long frameTime);
 
-void setRate(int time);
+void setRate(float percent);
 
 #endif
