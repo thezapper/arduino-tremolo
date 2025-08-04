@@ -69,7 +69,7 @@ void oled::powerOnMsg()
 
   display.setTextSize(3);    
   display.setCursor(19, 30);
-  display.write("CUNT!");
+  display.write("****!");
   display.display();
 
   delay(800);
